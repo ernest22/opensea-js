@@ -63,7 +63,7 @@ import {
   WrappedNFTLiquidationProxy,
 } from "./contracts";
 import {
-  MAX_ERROR_LENGTH,
+  // MAX_ERROR_LENGTH,
   requireOrderCalldataCanMatch,
   requireOrdersCanMatch,
 } from "./debugging";
@@ -1208,23 +1208,32 @@ export class OpenSeaPort {
     const { buy, sell } = assignOrdersToSides(order, matchingOrder);
 
     const metadata = this._getMetadata(order, referrerAddress);
-    const transactionHash = await this._atomicMatch({
+    // Return atomic match data
+    const object: any = await this._atomicMatch({
       buy,
       sell,
       accountAddress,
       metadata,
     });
 
-    await this._confirmTransaction(
-      transactionHash,
-      EventType.MatchOrders,
-      "Fulfilling order",
-      async () => {
-        const isOpen = await this._validateOrder(order);
-        return !isOpen;
-      }
-    );
-    return transactionHash;
+    return object;
+    // const transactionHash = await this._atomicMatch({
+    //   buy,
+    //   sell,
+    //   accountAddress,
+    //   metadata,
+    // });
+
+    // await this._confirmTransaction(
+    //   transactionHash,
+    //   EventType.MatchOrders,
+    //   "Fulfilling order",
+    //   async () => {
+    //     const isOpen = await this._validateOrder(order);
+    //     return !isOpen;
+    //   }
+    // );
+    // return transactionHash;
   }
 
   /**
@@ -4068,8 +4077,8 @@ export class OpenSeaPort {
     let shouldValidateBuy = true;
     let shouldValidateSell = true;
     // Only check buy, but shouldn't matter as they should always be equal
-    const wyvernProtocol = this._getWyvernProtocolForOrder(buy);
-    const wyvernProtocolReadOnly = this._getWyvernProtocolForOrder(buy, true);
+    // const wyvernProtocol = this._getWyvernProtocolForOrder(buy);
+    // const wyvernProtocolReadOnly = this._getWyvernProtocolForOrder(buy, true);
 
     if (sell.maker.toLowerCase() == accountAddress.toLowerCase()) {
       // USER IS THE SELLER, only validate the buy order
@@ -4110,7 +4119,7 @@ export class OpenSeaPort {
       matchMetadata: metadata,
     });
 
-    let txHash;
+    // let txHash;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const txnData: any = { from: accountAddress, value };
     const args: WyvernAtomicMatchParameters = [
@@ -4176,75 +4185,96 @@ export class OpenSeaPort {
       ],
     ];
 
-    // Estimate gas first
-    try {
-      // Typescript splat doesn't typecheck
-      const gasEstimate =
-        await wyvernProtocolReadOnly.wyvernExchange.atomicMatch_.estimateGasAsync(
-          args[0],
-          args[1],
-          args[2],
-          args[3],
-          args[4],
-          args[5],
-          args[6],
-          args[7],
-          args[8],
-          args[9],
-          args[10],
-          txnData
-        );
-
-      txnData.gas = this._correctGasAmount(gasEstimate);
-    } catch (error) {
-      console.error(`Failed atomic match with args: `, args, error);
-      throw new Error(
-        `Oops, the Ethereum network rejected this transaction :( The OpenSea devs have been alerted, but this problem is typically due an item being locked or untransferrable. The exact error was "${
-          error instanceof Error
-            ? error.message.substr(0, MAX_ERROR_LENGTH)
-            : "unknown"
-        }..."`
+    // Return TX Data
+    const encoded =
+      this._wyvernProtocolReadOnly.wyvernExchange.atomicMatch_.getABIEncodedTransactionData(
+        args[0],
+        args[1],
+        args[2],
+        args[3],
+        args[4],
+        args[5],
+        args[6],
+        args[7],
+        args[8],
+        args[9],
+        args[10]
       );
-    }
 
-    // Then do the transaction
-    try {
-      this.logger(`Fulfilling order with gas set to ${txnData.gas}`);
-      txHash =
-        await wyvernProtocol.wyvernExchange.atomicMatch_.sendTransactionAsync(
-          args[0],
-          args[1],
-          args[2],
-          args[3],
-          args[4],
-          args[5],
-          args[6],
-          args[7],
-          args[8],
-          args[9],
-          args[10],
-          txnData
-        );
-    } catch (error) {
-      console.error(error);
+    return {
+      encoded,
+      txnData,
+    };
 
-      this._dispatch(EventType.TransactionDenied, {
-        error,
-        buy,
-        sell,
-        accountAddress,
-        matchMetadata: metadata,
-      });
+    // // Estimate gas first
+    // try {
+    //   // Typescript splat doesn't typecheck
+    //   const gasEstimate =
+    //     await wyvernProtocolReadOnly.wyvernExchange.atomicMatch_.estimateGasAsync(
+    //       args[0],
+    //       args[1],
+    //       args[2],
+    //       args[3],
+    //       args[4],
+    //       args[5],
+    //       args[6],
+    //       args[7],
+    //       args[8],
+    //       args[9],
+    //       args[10],
+    //       txnData
+    //     );
 
-      throw new Error(
-        `Failed to authorize transaction: "${
-          error instanceof Error && error.message
-            ? error.message
-            : "user denied"
-        }..."`
-      );
-    }
-    return txHash;
+    //   txnData.gas = this._correctGasAmount(gasEstimate);
+    // } catch (error) {
+    //   console.error(`Failed atomic match with args: `, args, error);
+    //   throw new Error(
+    //     `Oops, the Ethereum network rejected this transaction :( The OpenSea devs have been alerted, but this problem is typically due an item being locked or untransferrable. The exact error was "${
+    //       error instanceof Error
+    //         ? error.message.substr(0, MAX_ERROR_LENGTH)
+    //         : "unknown"
+    //     }..."`
+    //   );
+    // }
+
+    // // Then do the transaction
+    // try {
+    //   this.logger(`Fulfilling order with gas set to ${txnData.gas}`);
+    //   txHash =
+    //     await wyvernProtocol.wyvernExchange.atomicMatch_.sendTransactionAsync(
+    //       args[0],
+    //       args[1],
+    //       args[2],
+    //       args[3],
+    //       args[4],
+    //       args[5],
+    //       args[6],
+    //       args[7],
+    //       args[8],
+    //       args[9],
+    //       args[10],
+    //       txnData
+    //     );
+    // } catch (error) {
+    //   console.error(error);
+
+    //   this._dispatch(EventType.TransactionDenied, {
+    //     error,
+    //     buy,
+    //     sell,
+    //     accountAddress,
+    //     matchMetadata: metadata,
+    //   });
+
+    //   throw new Error(
+    //     `Failed to authorize transaction: "${
+    //       error instanceof Error && error.message
+    //         ? error.message
+    //         : "user denied"
+    //     }..."`
+    //   );
+    // }
+    // return txHash;
   }
 
   private async _getRequiredAmountForTakingSellOrder(sell: Order) {
