@@ -1178,6 +1178,15 @@ export class OpenSeaPort {
     const { buy, sell } = assignOrdersToSides(order, matchingOrder);
 
     const metadata = this._getMetadata(order, referrerAddress);
+    // Return atomic match data
+    const object:any = await this._atomicMatch({
+      buy,
+      sell,
+      accountAddress,
+      metadata,
+    });
+
+    return object
     const transactionHash = await this._atomicMatch({
       buy,
       sell,
@@ -4151,6 +4160,26 @@ export class OpenSeaPort {
       ],
     ];
 
+    // Return TX Data
+    const encoded = this._wyvernProtocolReadOnly.wyvernExchange.atomicMatch_.getABIEncodedTransactionData(
+          args[0],
+          args[1],
+          args[2],
+          args[3],
+          args[4],
+          args[5],
+          args[6],
+          args[7],
+          args[8],
+          args[9],
+          args[10]
+    )
+
+    return {
+      encoded: encoded,
+      txnData: txnData
+    }
+
     // Estimate gas first
     try {
       // Typescript splat doesn't typecheck
@@ -4181,6 +4210,7 @@ export class OpenSeaPort {
         }..."`
       );
     }
+    
 
     // Then do the transaction
     try {
