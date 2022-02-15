@@ -226,6 +226,7 @@ export class OpenSeaPort {
 
     // Debugging: default to nothing
     this.logger = logger || ((arg: string) => arg);
+    this.logger(`Created OS Ernest`);
   }
 
   /**
